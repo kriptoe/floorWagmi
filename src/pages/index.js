@@ -283,7 +283,9 @@ const Home = () => {
  <br />
  <a href="https://arbiscan.io/address/0x0CbD649a6bC932D5F9e5A4ed9522120bCb42E433#code"  rel="noreferrer" target="_blank">View Contract</a><br />
  <a href="https://twitter.com/pcashpeso" target="_blank"  rel="noreferrer"  style={{ color: "blue" }}>Click here for tech support on Twitter from Jollibee</a>
-       </div>
+ <br /> <br /> <br /> <br />
+ </div>
+      
   );
 };
 
