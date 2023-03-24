@@ -22,14 +22,14 @@ const Home = () => {
   // const [yourCollectibles2, setYourCollectibles2] = useState(0);
   const [ownerID, setOwnerID] = useState(0);      // array position of the NFT when looping through owner's nfts
   const [NFTid, setNFTid] = useState("0");
-  const [loanAmount, setLoanAmount] = useState(.26);   
+  const [loanAmount, setLoanAmount] = useState(.24);   
   const [loanDays, setNFTDays] = useState(1);  // length of loan in days 
   const [totalLoans, setGetLoansLength] = useState(0); 
   const [borrowFee, setBorrowFee] = useState(0); 
   const [loanDetails, setLoanDetails] = useState("");
   const [repayDetails, setRepayEvent] = useState("");
 
-  let maxLoanBerries = 0.26 ;
+  let maxLoanBerries = 0.24 ;
 
   const contractConfig = {
     address: BLUE_ADDRESS,
