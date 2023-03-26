@@ -1,24 +1,24 @@
 import { ConnectButton } from '@rainbow-me/rainbowkit';
-import {  Divider, InputNumber, Button, List } from "antd";
+import React from 'react';
+import { Divider, InputNumber, Button, List, Select } from "antd";
 import { useState, useEffect } from "react";
-import {
-  useAccount,
-  useContractRead,
-  useContractEvent,
-} from "wagmi";
+import { useAccount,useContractRead, useWaitForTransaction,
+  useContractEvent, useContractWrite, usePrepareContractWrite } from "wagmi";
 import { ethers } from "ethers";
 import blueContract from "../contracts/blue.json"; // Raw ABI import (pulled from etherscan)
 import floorContract from "../contracts/floorLend.json"; // Raw ABI import (pulled from etherscan)
 import { Alchemy, Network } from "alchemy-sdk";
-
+  
 const Home = () => {
-// Optional Config object, but defaults to demo api-key and eth-mainnet.
 const settings = {
   apiKey: "lIguUBlNorQF0qVOvhyXc57Tkgk3JynZ", // Replace with your Alchemy API Key.
   network: Network.ARB_MAINNET, // Replace with your network.
 };
 
 const alchemy = new Alchemy(settings);
+
+let maxLoanBerries = 0.24 ;
+let maxLoanSmols = 0.3 ;
 
   const BLUE_ADDRESS ="0x17f4BAa9D35Ee54fFbCb2608e20786473c7aa49f";
   const FLOOR_LENDING ="0x0CbD649a6bC932D5F9e5A4ed9522120bCb42E433";
@@ -28,17 +28,16 @@ const alchemy = new Alchemy(settings);
   const [lendBalance2, setLendBalance] = useState(0);
   const {address, isConnected} = useAccount();
   // const [yourCollectibles2, setYourCollectibles2] = useState(0);
-  const [ownerID, setOwnerID] = useState(0);      // array position of the NFT when looping through owner's nfts
+  const [collectionNumber, setCollectionNumber] = useState(0);  // indenitifies the NFT collection to be used 
   const [NFTid, setNFTid] = useState("0");
   const [loanAmount, setLoanAmount] = useState(.24);   
+  const [loanAmountStr, setLoanAmountStr] = useState("");    // puts the eth amount of the loan into string format  
   const [loanDays, setNFTDays] = useState(1);  // length of loan in days 
-  const [totalLoans, setGetLoansLength] = useState(0); 
   const [borrowFee, setBorrowFee] = useState(0); 
   const [loanDetails, setLoanDetails] = useState("");
   const [repayDetails, setRepayEvent] = useState("");
   const [yourCollectibles2, setYourCollectibles2] = useState();
-
-  let maxLoanBerries = 0.24 ;
+  const [loanInfoString, setMaxLoanString] = useState("Maximum loan size for GMX Blueberries is " + maxLoanBerries + " ETH");
 
   const contractConfig = {
     address: BLUE_ADDRESS,
@@ -50,17 +49,70 @@ const alchemy = new Alchemy(settings);
     abi: floorContract,
   };
 
-  const test2 = async () => {
-    // Print owner's wallet address:
-    alert(address)
-    return
-  const ownerAddr = address;
-  console.log("fetching NFTs for address:", ownerAddr);
-  // Print total NFT count returned in the response:
-  const nftsForOwner = await alchemy.nft.getNftsForOwner(ownerAddr);
-  console.log("number of NFTs found:", nftsForOwner.totalCount);
+   //  function to call contract lend write function
+  const { config: loan, error: loanError } = usePrepareContractWrite({
+    ...contractConfig2,
+    functionName: "lend",
+    args: [NFTid, loanDays, collectionNumber, ethers.utils.parseEther(loanAmount + "")], //hardcoded address can create a state variable
+    onError(error) {
+      console.log("Error", error);
+    },
+  });
+
+  const {
+    data: lendData,              // use this to get tx hash
+    write: callLoan, 
+  } = useContractWrite(loan);
+
+  const { config: approveLending, error: adminError } = usePrepareContractWrite({
+    ...contractConfig,
+    functionName: "approve",
+    args: [FLOOR_LENDING, NFTid], //hardcoded address can create a state variable
+    onError(error) {
+      console.log("Error", error);
+    },
+  });
+
+  const {
+    data: appoveData,              // use this to get tx hash
+    write: approveLend, 
+  } = useContractWrite(approveLending);
+
+ const {isSuccess: txSuccess} = useWaitForTransaction({
+    hash: appoveData?.hash
+  })
+
+  const {isSuccess: txSuccessLend} = useWaitForTransaction({
+    hash: lendData?.hash
+  })
+
+  const isApproved = txSuccess  // checks if approval has gone through
+  const isLent = txSuccessLend  // checks if approval has gone through
+
+  // uses alchemy API to display NFTs owned by user for blueberry collection
+  //   0x6325439389e0797ab35752b4f43a14c004f22a9c .Smol Brain  0xbe56F9Ac7E0b9232Adb86540fa69F1dE7b43995f
+  const getSmol = async () => {
+    if(isConnected==true)  // check wallet is connected
+    {
+      const nftsForOwner = await alchemy.nft.getNftsForOwner("0xC1E42F862d202B4A0eD552c1145735EE088f6Ccf");
+      const nftList = nftsForOwner["ownedNfts"]; 
+      const collectibleUpdate = [];
+      for (let nft of nftList) {
+        try{
+          if (nft.contract.address == "0x6325439389e0797ab35752b4f43a14c004f22a9c")
+          {console.log(` ${nft.tokenId} ` );
+          let addr = "https://ipfs.io/ipfs/QmWV1wuqxdY2VcyQFVVK9KXuHSzv7FRnX8GKeo9NSrmZX4/image/" + nft.tokenId + "/5.png";
+          collectibleUpdate.push({ id: nft.tokenId, image: addr, owner: address});
+         }
+        }
+        catch(e) {alert (e, "NFT Error")}
+      } 
+      setYourCollectibles2(collectibleUpdate);
+    }else
+    alert("Please connect a wallet")
   };
 
+  // uses alchemy API to display NFTs owned by user for blueberry collection
   const test = async () => {
     if(isConnected==true)  // check wallet is connected
     {
@@ -80,20 +132,7 @@ const alchemy = new Alchemy(settings);
       setYourCollectibles2(collectibleUpdate);
     }else
     alert("Please connect a wallet")
-
   };
-
-  /***************************************************************************** */
-  // Approve Function - with payable option
-
-  /** @dev Setup Prepare contract to grab information before button execution
-   * The information is "Prepared" before you push the button for execution
-   */
-
-
-  /** @dev Pull the "adminMinter" config from the usePrepareContractWrite hook
-   *  Put it into the "mintAdmin" function to execute in the front end
-   */
 
   /* ********************** EVENTS ***************************************************** */
   // a loan has been created
@@ -102,8 +141,7 @@ const alchemy = new Alchemy(settings);
     abi: floorContract,
     eventName: 'loanEvent',
     listener(sender, NFTid, collectionID ,loanAmount, dueDate) {
-      console.log(" NFTid " + NFTid + " Loan amount : " + ethers.utils.formatEther(loanAmount + "") + " Due date : " + getDate(dueDate))
-      setLoanDetails("SUCCESSFULLY REPAID - NFTid " + NFTid + " Loan amount : " + ethers.utils.formatEther(loanAmount + "") + " Due date : " + getDate(dueDate))
+      setLoanDetails("Loan Details : NFTid " + NFTid + " Loan amount : " + ethers.utils.formatEther(loanAmount + "") + " Due date : " + getDate(dueDate))
      },
   })
   //  a loan has been repaid
@@ -112,7 +150,7 @@ const alchemy = new Alchemy(settings);
     abi: floorContract,
     eventName: 'repayLoanEvent',
     listener(NFTid, sender ,loanAmount) {
-      setRepayEvent("sender: " + sender + " NFTid " + NFTid + " Repay amount : " + ethers.utils.formatEther(loanAmount + ""))
+      setRepayEvent("SUCCESSFULLY REPAID -  NFTid " + NFTid + " Repay amount : " + ethers.utils.formatEther(loanAmount + ""))
        },
   })
 
@@ -139,12 +177,6 @@ const alchemy = new Alchemy(settings);
   const { data: lendBalance, error: getLendBalanceError } = useContractRead({
     ...contractConfig2,
     functionName: "getBalance",
-  });
-
-  const { data: getLoansLength, error: getLoansLengthError } = useContractRead({
-    ...contractConfig2,
-    functionName: "getMappingLength",
-    args: [address, 0], //address and colelction ID 
   });
 
   const { data: getBorrowFee, error: calcBorrowFee } = useContractRead({
@@ -190,13 +222,6 @@ const alchemy = new Alchemy(settings);
     }
   }, [lendBalance]);
 
-  useEffect(() => {
-    if (getLoansLength) {
-      let temp = getLoansLength;
-      setGetLoansLength(temp);
-    }
-  }, [getLoansLength]);
-
   function getDate(dt) {
     const milliseconds = dt * 1000 // 1575909015000
     const dateObject = new Date(milliseconds)
@@ -204,16 +229,7 @@ const alchemy = new Alchemy(settings);
     return humanDateFormat;
   }
 
-   // get all the NFT IDs of the current wallet
-  const getNFTs = async ( ) => {
-    let str = ""
-    setOwnerID(0)   
-    alert(  ownerID)
-    setOwnerID(1)
-     
-    alert(  ownerID) 
-  };
-
+  /* approve the transfer of NFT on the Blueberry contract
   const handleClick = async (event, message) => {
     const provider = new ethers.providers.Web3Provider(window.ethereum);
     const signer = provider.getSigner();
@@ -223,7 +239,7 @@ const alchemy = new Alchemy(settings);
       await marketWithSigner.approve(FLOOR_LENDING, message);
     }catch(e) {alert ("approve error"); console.log(e);}
   };
-  
+  */
 
      // input number handler for NFT ID
      const changeDuration = value => {
@@ -245,17 +261,23 @@ const alchemy = new Alchemy(settings);
     "function repayLoan( uint256 tokenId , uint256 collectionID )", 
   ];
 
-  const lend = async (event, nftNumber) =>{ 
-    const provider = new ethers.providers.Web3Provider(window.ethereum);
-    const signer = provider.getSigner();
-    const marketContract = new ethers.Contract(FLOOR_LENDING, floorContract, provider);
-    const marketWithSigner = marketContract.connect(signer); 
-    try{  
-      await marketWithSigner.lend(nftNumber, loanDays, 0 ,ethers.utils.parseEther(loanAmount + ""));
-    }catch(e) {alert (e, "Lend error"); console.log(e);}setLoanAmount
+  // Calls the WRITE lend function in the Floorlend contract
+  const callLend = async (event, nftNumber) =>{ 
+    var date = new Date();
+    setNFTid(nftNumber)
+    setLoanAmountStr(ethers.utils.parseEther(loanAmount + "")) ;
+    console.log( ethers.utils.parseEther(loanAmount + ""),  " NFTID ", NFTid, "amount ", loanAmount, " collection " , collectionNumber, " due date" , date.getDate()  )
+    setLoanDetails("Loan Details : NFTid " + NFTid + " Loan amount : " + loanAmount  + " eth due in " + date.setDate(date.getDate() + loanDays))
+  return
+    callLoan?.()
+
    }
 
-
+   // calls the approve() function in the Blueberry contract
+  const approve = async (event, id) =>{ 
+    setNFTid(id)
+    approveLend?.()
+   }
    /*
    const getLoans= async ( ) => {
     let tokenURI = ""
@@ -286,7 +308,6 @@ const alchemy = new Alchemy(settings);
         }
         catch(e) {alert (e, "repay error"); console.log(e);}
     }
-
   }
 
    // input number handler for NFT ID
@@ -294,30 +315,32 @@ const alchemy = new Alchemy(settings);
     setNFTid(value);
   };
 
+  const handleChange = (value) => {
+    setCollectionNumber(value)
+    if(value==0)
+     setMaxLoanString("Maximum loan size for GMX Blueberries is " + maxLoanBerries + " ETH")
+    else
+     setMaxLoanString("Maximum loan size for Smol Brains is " + maxLoanSmols + " ETH")    
+  };
+
   return (
+<div className="App">
+
 <div style={{textAlign: "center"}} suppressHydrationWarning={true}>
 <table style={{marginLeft: "auto", marginRight: "auto"}}  ><thead>
- <tr><th><ConnectButton showBalance={true} /></th></tr></thead></table>
-
-
+ <tr><th><ConnectButton showBalance={true} /> </th></tr></thead></table>
 <h1 style={{ fontSize: 30 }}>FLOOR 101 NFT Lending (beta)</h1> 
   <h3>You own {ownerTokens2.toString()} Blueberries</h3>
-  <h3 suppressHydrationWarning>Lending Contract has { ethers.utils.formatEther(lendBalance2.toString()).substring(0,6) } ETH available</h3>
- <br /> 
- Enter NFT ID, choose length of loan and amount then approve and lend.
-  <table style={{marginLeft: "auto", marginRight: "auto"}}  ><thead>
- <tr><th>Nft ID : </th><th><InputNumber min={1} max={10000} defaultValue={1} onChange={setNFTid} style={{ width: 200 }} /></th></tr>
- <tr><th>Loan Duration : </th><th>
-  <InputNumber min={1} max={28} placeholder={"Loan Duration"} defaultValue={1} onChange={changeDuration} style={{ width: 200 }} />
-  </th></tr>
-  <tr><th>Loan Amount : </th><th>
-  <InputNumber min={.1} max={maxLoanBerries} step={0.01} value={loanAmount} onChange={changeLoan} style={{ width: 200 }} />
-  </th></tr></thead></table>
- 
- <Button type="primary" shape="round" onClick={(event) => handleClick(event, tokenURI)}  style={{ width: 120}}>Approve</Button>{" "}
- <Button type="primary" shape="round" onClick={(event) => lend(event, NFTid)} style={{ width: 120}}>LEND</Button>  
- <Divider />
- <Button type="primary" shape="round" onClick={() => test()}>Display My Blueberries</Button>
+  <Select defaultValue="GMX Blueberry Club" style={{width: 200,}} onChange={handleChange}
+      options={[
+        {value: '0', label: 'GMX Blueberry Club',},
+        {value: '1',label: 'Smol Brains - coming soon', disabled:true,},
+      ]}
+    />
+  <h3>Lending Contract has { ethers.utils.formatEther(lendBalance2.toString()).substring(0,6) } ETH available</h3>
+  <h3>{loanInfoString}</h3>
+  
+ <Button type="primary" shape="round" onClick={() => test()}>Display My NFTs</Button>  
  <List id="centerWrapper !important" dataSource={yourCollectibles2} renderItem={item => {
                     return (
 <List.Item>
@@ -331,13 +354,18 @@ const alchemy = new Alchemy(settings);
  <tr><th>Loan Amount : </th><th>
  <InputNumber min={.1} max={maxLoanBerries} step={0.01} value={loanAmount} onChange={changeLoan} style={{ width: 200 }} />
  </th></tr></thead></table>
- <Button type="primary" shape="round" onClick={(event) => handleClick(event, item.id)} style={{ marginTop: 10, width: 120 }}>Approve</Button>{" "}
- <Button type="primary" shape="round" onClick={(event) => lend(event, item.id)} style={{ marginTop: 10, width: 120 }}>LEND</Button><br />
- Loan Details {loanDetails}
+ <Button  type="primary" shape="round"  onClick={(event) => approve(event, item.id)}  >
+          Approve Lending</Button>{" "}
+
+  {isConnected && isApproved && (
+ <Button type="primary" shape="round" onClick={(event) => callLend(event, NFTid)} style={{ width: 140}}>Lend
+ </Button>  
+ )}
+ <br />
+
+  {loanDetails} 
  </List.Item>
 );}}/>
-
- Loan Details {loanDetails}
  
  <Divider />
  <h1 style={{fontSize: 30}}>Repay Loan</h1>
@@ -350,7 +378,8 @@ const alchemy = new Alchemy(settings);
  <a href="https://twitter.com/pcashpeso" target="_blank"  rel="noreferrer"  style={{ color: "blue" }}>Click here for tech support on Twitter from Jollibee</a>
  <br /> <br /> <br /> <br />
  </div>
-      
+
+</div>
   );
 };
 

@@ -5,6 +5,7 @@ import { AppProps } from 'next/app';
 import { configureChains, createClient, WagmiConfig } from 'wagmi';
 import { arbitrum } from 'wagmi/chains';
 import { publicProvider } from 'wagmi/providers/public';
+import Navbar from "../components/Navbar";
 
 const { chains, provider, webSocketProvider } = configureChains(
   [
