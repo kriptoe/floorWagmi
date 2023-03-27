@@ -38,3 +38,7 @@ The easiest way to deploy your Next.js app is to use the [Vercel Platform](https
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/deployment) for more details.
 
 https://www.youtube.com/watch?v=nded252qxcA
+
+The owner needs to add any new collection and set the max loan etc.
+0.3eth = 300000000000000000
+0.005 decay rate 5000000000000000
