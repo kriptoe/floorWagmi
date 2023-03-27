@@ -26,8 +26,6 @@ let maxLoanSmols = 0.3 ;
   const SMOL_ADDRESS = "0x6325439389e0797ab35752b4f43a14c004f22a9c"
   // Smoll Collection is position 2 in nmappings, but its collectionID number is 1
 
-  const [ownerTokens2, setOwnerTokens] = useState(0);
-  const [tokenURI, setNftTokens] = useState(0);   // the id of the NFT eg 5674, 23, 6013
   const [lendBalance2, setLendBalance] = useState(0);
   const {address, isConnected} = useAccount();
   // const [yourCollectibles2, setYourCollectibles2] = useState(0);
@@ -149,12 +147,6 @@ let maxLoanSmols = 0.3 ;
    * The isDataEqual option has been deprecated and will be removed in the next release....
    */
 
-  const { data: ownerTokens, error: ownerError } = useContractRead({
-    ...contractConfig,
-    functionName: "balanceOf",
-    args: [address], //hardcoded address can create a state variable
-  });
-
   const { data: nftTokens, error: getNFTError } = useContractRead({
     ...contractConfig,
     functionName: "tokenOfOwnerByIndex",
@@ -187,20 +179,6 @@ let maxLoanSmols = 0.3 ;
       setBorrowFee(temp);
     }
   }, [getBorrowFee]);
-
-  useEffect(() => {
-    if (ownerTokens) {
-      let temp = ownerTokens;
-      setOwnerTokens(temp);
-    }
-  }, [ownerTokens]);
-
-  useEffect(() => {
-    if (nftTokens) {
-      let temp = nftTokens;
-      setNftTokens(temp);
-    }
-  }, [nftTokens]);
 
   useEffect(() => {
     if (lendBalance) {
@@ -377,11 +355,13 @@ let maxLoanSmols = 0.3 ;
 <table style={{marginLeft: "auto", marginRight: "auto"}}  ><thead>
  <tr><th><ConnectButton showBalance={true} /> </th></tr></thead></table>
 <h1 style={{ fontSize: 30 }}>FLOOR 101 NFT Lending (beta)</h1> 
-  <h3>You own {ownerTokens2.toString()} Blueberries</h3>
-  <Select defaultValue="GMX Blueberry Club" style={{width: 200,}} onChange={handleChange}
+  Interest rate on loans is .001% per day, approx 50cents a day on .3 eth loan.<br />If you pay back a 28day loan
+    in 1 day, you only pay 1 days interest.<br />
+
+  <Select defaultValue="GMX Blueberry Club" style={{width: 200, padding:5}} onChange={handleChange}
       options={[
         {value: '0', label: 'GMX Blueberry Club',},
-        {value: '2',label: 'Smol Brains - coming soon', },
+        {value: '2',label: 'Smol Brains (legacy)', },
       ]}
     />
   <h3>Lending Contract has { ethers.utils.formatEther(lendBalance2.toString()).substring(0,6) } ETH available</h3>
