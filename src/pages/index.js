@@ -429,7 +429,7 @@ let maxLoanSmols = 0.3 ;
  <Select defaultValue="GMX Blueberry Club" style={{width: 200,}} onChange={handleChange}
       options={[
         {value: '0', label: 'GMX Blueberry Club',},
-        {value: '2',label: 'Smol Brains - coming soon', },
+        {value: '2',label: 'Smol Brains', },
       ]}
     /><br />
  <InputNumber min={1} max={12100} placeholder={"NFT ID"} onChange={onChange2} style={{width: 200, marginBottom: 10 }} /><br />
